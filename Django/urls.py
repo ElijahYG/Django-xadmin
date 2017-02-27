@@ -21,7 +21,7 @@ import xadmin
 
 # from users.views import user_login       这里是用于调用函数级别的login
 # 下面是调用类级别的login，继承django的View即可
-from users.views import LoginView, RegisterView
+from users.views import LoginView, RegisterView, ActiveView
 
 
 urlpatterns = [
@@ -30,4 +30,5 @@ urlpatterns = [
     url('^login/$', LoginView.as_view(), name='login'),
     url('^register/$', RegisterView.as_view(), name='register'),
     url(r'^captcha/', include('captcha.urls')),
+    url(r'^active/(?P<active_code>.*)/$', ActiveView.as_view(), name="user_active"),
 ]
