@@ -7,7 +7,7 @@ from django.views.generic import View
 from pure_pagination import Paginator, EmptyPage, PageNotAnInteger
 
 from .models import Course, CourseResource
-from  operation.models import UserFavourite, CourseComments, UserCourse
+from operation.models import UserFavourite, CourseComments, UserCourse
 from utils.mixin_utils import LoginRequiredMixin
 # Create your views here.
 
@@ -85,10 +85,10 @@ class CourseInfoView(LoginRequiredMixin, View):
             user_courses.save()
 
         user_courses = UserCourse.objects.filter(course=course)
-        user_ids = [user_courses.user.id for user_course in user_courses]
+        user_ids = [user_course.user.id for user_course in user_courses]
         all_user_courses = UserCourse.objects.filter(user_id__in=user_ids)
         #取出所有课程id
-        course_ids = [user_courses.course.id for user_course in user_courses]
+        course_ids = [user_course.course.id for user_course in user_courses]
         #获取学过该用户学过其他的所有课程
         relate_courses = Course.objects.filter(id__in=course_ids).order_by("-click_nums")[:5]
         all_resources = CourseResource.objects.filter(course=course)
