@@ -1,4 +1,5 @@
 # coding=utf-8
+import json
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.backends import ModelBackend
@@ -8,9 +9,12 @@ from django.views.generic.base import View
 # 为明文密码加密
 from django.contrib.auth.hashers import make_password
 
+from django.http import HttpResponse
+
 from .models import UserProfile, EmailVerifyRecord
-from .forms import LoginForm, RegisterForm, ForgetForm, ModifyPwdForm
+from .forms import LoginForm, RegisterForm, ForgetForm, ModifyPwdForm, UploadImageForm, UserInfoForm
 from utils.email_send import send_register_email
+from utils.mixin_utils import LoginRequiredMixin
 
 # use e-mail to login
 class CustomBackend(ModelBackend):
@@ -107,6 +111,9 @@ class ResetView(View):
             return render(request, "active_fail.html")
         return render(request, "login.html")
 class ModifyPwdView(View):
+    '''
+    修改用户密码
+    '''
     def post(self,request):
         modify_form = ModifyPwdForm(request.POST)
         if modify_form.is_valid():
@@ -125,7 +132,87 @@ class ModifyPwdView(View):
             return render(request, "password_reset.html", {"email": email,"modify_form":modify_form })
 
 
+class UserInfoView(LoginRequiredMixin, View):
+    '''
+    用户个人信息
+    '''
+    def get(self, request):
+        return render(request, 'usercenter-info.html', {})
 
+    def post(self, request):
+        user_info_form = UserInfoForm(request.POST, instance=request.user)
+        if user_info_form.is_valid():
+            user_info_form.save()
+            return HttpResponse('{"status":"success" }', content_type='application/json')
+        else:
+            return HttpResponse(json.dumps(user_info_form.errors), content_type='application/json')
+
+
+class UploadImageView(LoginRequiredMixin, View):
+    '''
+    用户修改头像
+    '''
+    def post(self, request):
+        image_form = UploadImageForm(request.POST, request.FILES, instance=request.user)
+        if image_form.is_valid():
+            # 如果上面的为这样的话image_form = UploadImageForm(request.POST, request.FILES)，则需要下面这三行
+            # image = image_form.cleaned_data['image']
+            # request.user.image = image
+            # request.user.save()
+            image_form.save()
+            return HttpResponse('{"status":"success" }', content_type='application/json')
+        else:
+            return HttpResponse('{"status":"fail" }', content_type='application/json')
+
+
+class UpdatePwdView(View):
+    '''
+    个人中心修改用户密码
+    '''
+    def post(self,request):
+        modify_form = ModifyPwdForm(request.POST)
+        if modify_form.is_valid():
+            pwd1 = request.POST.get("password1","")
+            pwd2 = request.POST.get("password2", "")
+            if pwd1!=pwd2:
+                return HttpResponse('{"status":"fail" , "msg":"密码不一致！"}', content_type='application/json')
+            user = request.user
+            user.password = make_password(pwd2)
+            user.save()
+
+            return HttpResponse('{"status":"success" }', content_type='application/json')
+        else:
+            return HttpResponse(json.dumps(modify_form.errors), content_type='application/json')
+
+class SendEmailCodeView(LoginRequiredMixin, View):
+    '''
+    发送邮箱验证码
+    '''
+    def get(self, request):
+        email = request.GET.get('email', '')
+
+        if UserProfile.objects.filter(email=email):
+            return HttpResponse('{"email":"邮箱已经存在！"}', content_type='application/json')
+        send_register_email(email, "update_email")
+
+        return HttpResponse('{"status":"success"}', content_type='application/json')
+
+class UpdateEmailView(LoginRequiredMixin, View):
+    '''
+    修改个人邮箱
+    '''
+    def post(self, request):
+        email = request.POST.get('email', '')
+        code = request.POST.get('code', '')
+
+        existed_record = EmailVerifyRecord.objects.filter(email=email, code=code, send_type='update_email')
+        if existed_record:
+            user= request.user
+            user.email = email
+            user.save()
+            return HttpResponse('{"status":"success"}', content_type='application/json')
+        else:
+            return HttpResponse('{"email":"验证码输入错误！"}', content_type='application/json')
 
 
 

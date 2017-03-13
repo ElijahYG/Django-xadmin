@@ -1,5 +1,6 @@
 # coding=utf-8
 from django.shortcuts import render
+from django.db.models import Q
 #用于继承View类
 from django.views.generic import View
 from pure_pagination import Paginator, EmptyPage, PageNotAnInteger
@@ -23,6 +24,12 @@ class OrgView(View):
         hot_orgs = all_orgs.order_by("click_nums")[:3]
         #城市
         all_citys = CityDict.objects.all()
+
+        # 机构搜索
+        search_keywords = request.GET.get('keywords', "")
+        if search_keywords:
+            all_orgs = all_orgs.filter(
+                Q(name__icontains=search_keywords) | Q(desc__icontains=search_keywords))
 
         #取出筛选城市
         city_id = request.GET.get('city', "")
@@ -187,6 +194,14 @@ class TeacherListView(View):
     def get(self, request):
         all_teachers = Teacher.objects.all()
 
+        # 讲师搜索
+        search_keywords = request.GET.get('keywords', "")
+        if search_keywords:
+            all_teachers = all_teachers.filter(Q(name__icontains=search_keywords) |
+                                               Q(work_company__icontains=search_keywords)|
+                                               Q(work_years__icontains=search_keywords) |
+                                               Q(work_position__icontains=search_keywords))
+
         # 按点击量排序
         sort = request.GET.get('sort', "")
         if sort:
@@ -217,6 +232,14 @@ class TeacherDetailView(View):
         teacher = Teacher.objects.get(id=int(teacher_id))
         all_courses = Course.objects.filter(teacher=teacher)
 
+        has_teacher_faved = False
+        if UserFavourite.objects.filter(user = request.user, fav_type=3, fav_id=teacher.id):
+            has_teacher_faved = True
+
+        has_org_faved = False
+        if UserFavourite.objects.filter(user = request.user, fav_type=2, fav_id=teacher.org.id):
+            has_org_faved = True
+
         # 讲师排行榜
         sorted_teacher = Teacher.objects.all().order_by("-click_nums")[:1]
 
@@ -224,6 +247,9 @@ class TeacherDetailView(View):
             'teacher':teacher,
             'all_courses':all_courses,
             'sorted_teacher':sorted_teacher,
+            'has_teacher_faved':has_teacher_faved,
+            'has_org_faved':has_org_faved,
+
         })
 
 
