@@ -60,7 +60,11 @@ class UserMessage(models.Model):
         verbose_name_plural = verbose_name
 
     def __unicode__(self):
-        return self.user
+        '''此处是Django的一个bug，详情参见http://www.cnblogs.com/wenjiashe521/archive/2012/12/24/2831196.html
+        或者http://www.th7.cn/Program/Python/201605/853986.shtml，正常情况下应该时用return self.user
+        '''
+        # return self.user
+        return "%d" % self.user
 
 
 class UserCourse(models.Model):
