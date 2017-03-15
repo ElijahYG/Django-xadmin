@@ -23,16 +23,19 @@ from django.views.static import serve
 
 # from users.views import user_login       这里是用于调用函数级别的login
 # 下面是调用类级别的login，继承django的View即可
-from users.views import LoginView, RegisterView, ActiveView, ForgetPwdView, ResetView, ModifyPwdView
+from users.views import LoginView, LogoutView, RegisterView, ActiveView, ForgetPwdView, ResetView, ModifyPwdView
+from users.views import IndexView
 from organization.views import OrgView
 #用于处理media图片
-from Django.settings import MEDIA_ROOT
+from Django.settings import MEDIA_ROOT, STATIC_ROOT
 
 
 urlpatterns = [
     url(r'^xadmin/', xadmin.site.urls),
-    url('^$', TemplateView.as_view(template_name='index.html'), name='index'),
+    # url('^$', TemplateView.as_view(template_name='index.html'), name='index'),
+    url('^$', IndexView.as_view(), name='index'),
     url('^login/$', LoginView.as_view(), name='login'),
+    url('^logout/$', LogoutView.as_view(), name='logout'),
     url('^register/$', RegisterView.as_view(), name='register'),
     url(r'^captcha/', include('captcha.urls')),
     url(r'^active/(?P<active_code>.*)/$', ActiveView.as_view(), name="user_active"),
@@ -47,7 +50,15 @@ urlpatterns = [
     #配置上传文件的访问处理函数
     url(r'^media/(?P<path>.*)', serve, {"document_root":MEDIA_ROOT}),
 
+    #当setting中DEBUG模式为False时，手动配置静态文件访问目录
+    url(r'^static/(?P<path>.*)', serve, {"document_root":STATIC_ROOT}),
+
     #配置上传文件的访问处理函数
     url(r'^users/', include('users.urls', namespace="users")),
 
 ]
+
+#全局404页面配置
+handler404 = 'users.views.page_not_found'
+#全局500页面配置
+handler500 = 'users.views.page_error'
